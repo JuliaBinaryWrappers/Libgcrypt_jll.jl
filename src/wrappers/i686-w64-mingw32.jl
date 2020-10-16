@@ -2,52 +2,15 @@
 export libgcrypt
 
 using Libgpg_error_jll
-## Global variables
-PATH = ""
-LIBPATH = ""
-LIBPATH_env = "PATH"
-LIBPATH_default = ""
-
-# Relative path to `libgcrypt`
-const libgcrypt_splitpath = ["bin", "libgcrypt-20.dll"]
-
-# This will be filled out by __init__() for all products, as it must be done at runtime
-libgcrypt_path = ""
-
-# libgcrypt-specific global declaration
-# This will be filled out by __init__()
-libgcrypt_handle = C_NULL
-
-# This must be `const` so that we can use it with `ccall()`
-const libgcrypt = "libgcrypt-20.dll"
-
-
-"""
-Open all libraries
-"""
+JLLWrappers.@generate_wrapper_header("Libgcrypt")
+JLLWrappers.@declare_library_product(libgcrypt, "libgcrypt-20.dll")
 function __init__()
-    global artifact_dir = abspath(artifact"Libgcrypt")
+    JLLWrappers.@generate_init_header(Libgpg_error_jll)
+    JLLWrappers.@init_library_product(
+        libgcrypt,
+        "bin\\libgcrypt-20.dll",
+        RTLD_LAZY | RTLD_DEEPBIND,
+    )
 
-    # Initialize PATH and LIBPATH environment variable listings
-    global PATH_list, LIBPATH_list
-    # From the list of our dependencies, generate a tuple of all the PATH and LIBPATH lists,
-    # then append them to our own.
-    foreach(p -> append!(PATH_list, p), (Libgpg_error_jll.PATH_list,))
-    foreach(p -> append!(LIBPATH_list, p), (Libgpg_error_jll.LIBPATH_list,))
-
-    global libgcrypt_path = normpath(joinpath(artifact_dir, libgcrypt_splitpath...))
-
-    # Manually `dlopen()` this right now so that future invocations
-    # of `ccall` with its `SONAME` will find this path immediately.
-    global libgcrypt_handle = dlopen(libgcrypt_path)
-    push!(LIBPATH_list, dirname(libgcrypt_path))
-
-    # Filter out duplicate and empty entries in our PATH and LIBPATH entries
-    filter!(!isempty, unique!(PATH_list))
-    filter!(!isempty, unique!(LIBPATH_list))
-    global PATH = join(PATH_list, ';')
-    global LIBPATH = join(vcat(LIBPATH_list, [Sys.BINDIR, joinpath(Sys.BINDIR, Base.LIBDIR, "julia"), joinpath(Sys.BINDIR, Base.LIBDIR)]), ';')
-
-    
+    JLLWrappers.@generate_init_footer()
 end  # __init__()
-
